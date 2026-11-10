@@ -11,6 +11,7 @@ modules:
     type: shell
     commands:
       - mkdir -p /nix /etc/nix
+      - dpkg --configure -a
       - grep -q '^experimental-features' /etc/nix/nix.conf 2>/dev/null || echo 'experimental-features = nix-command flakes' >> /etc/nix/nix.conf
       - mkdir -p /etc/systemd/system/sysinit.target.wants /etc/systemd/system/sockets.target.wants
       - ln -sf /usr/lib/systemd/system/nix-bind.service /etc/systemd/system/sysinit.target.wants/nix-bind.service
