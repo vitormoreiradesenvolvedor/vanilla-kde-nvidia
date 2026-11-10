@@ -1,13 +1,13 @@
 #!/bin/bash
 # Configuracao de sistema que depende dos usuarios existirem:
-#  - adiciona usuarios humanos aos grupos docker / nix-users
+#  - adiciona usuarios humanos aos grupos docker / nix-users / dialout (portas seriais)
 #  - extrai o Homebrew em /home/linuxbrew para o primeiro usuario
 set -u
 
 mapfile -t users < <(getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 && $7 !~ /(nologin|false)$/ {print $1}')
 [ "${#users[@]}" -eq 0 ] && exit 0
 
-for g in docker nix-users; do
+for g in docker nix-users dialout; do
     getent group "$g" >/dev/null || groupadd -r "$g"
     for u in "${users[@]}"; do
         id -nG "$u" | tr ' ' '\n' | grep -qx "$g" || usermod -aG "$g" "$u"

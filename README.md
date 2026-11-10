@@ -33,7 +33,7 @@ Construída com [Vib](https://github.com/Vanilla-OS/vib) sobre a imagem oficial
 4. No 1º boot o plasma-setup cria o usuário. Depois do 1º login:
    - SDKMAN + Java e Rust stable são instalados em segundo plano (alguns minutos);
    - Gear Lever e Junction são instalados do Flathub (precisa de rede; tenta de novo até conseguir);
-   - o Homebrew é extraído em `/home/linuxbrew` e seu usuário entra nos grupos `docker` e `nix-users`.
+   - o Homebrew é extraído em `/home/linuxbrew` e seu usuário entra nos grupos `docker`, `nix-users` e `dialout`.
    Faça logout/login uma vez para os grupos valerem.
 
 ### Migrar um Vanilla OS 3 já instalado
