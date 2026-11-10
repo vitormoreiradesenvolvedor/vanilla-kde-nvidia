@@ -1,0 +1,40 @@
+#!/bin/bash
+# Roda uma vez por usuario no primeiro login grafico (servico de usuario).
+# Instala SDKMAN com o Java mais recente e a toolchain Rust stable.
+set -u
+STATE="${XDG_STATE_HOME:-$HOME/.local/state}/devtools-bootstrap"
+mkdir -p "$STATE"
+
+# Junction: enxerga apps do usuario (AppImages integradas pelo Gear Lever em
+# ~/.local/share/applications e Flatpaks --user). Roda sempre, e idempotente.
+if command -v flatpak >/dev/null; then
+    flatpak override --user re.sonny.Junction \
+        --env=XDG_DATA_DIRS="$HOME/.local/share:$HOME/.local/share/flatpak/exports/share:/app/share:/run/host/usr/share:/run/host/usr/local/share:/var/lib/flatpak/exports/share:/var/lib/snapd/desktop:/usr/share" || true
+fi
+
+# Espera rede (ate ~5 min)
+for _ in $(seq 60); do
+    curl -fsS --max-time 5 -o /dev/null https://api.sdkman.io/2/broker/version && break
+    sleep 5
+done
+
+if [ ! -f "$STATE/sdkman.done" ]; then
+    if [ ! -d "$HOME/.sdkman" ]; then
+        curl -fsSL "https://get.sdkman.io?ci=true" | bash || exit 1
+    fi
+    # shellcheck disable=SC1091
+    source "$HOME/.sdkman/bin/sdkman-init.sh"
+    sdk_java="$(sdk list java 2>/dev/null | grep -E '\| tem +\|' | grep -vE '\.ea\.|-ea' | awk -F'|' '{gsub(/ /,"",$6); print $6}' | sort -V | tail -1)"
+    if [ -n "$sdk_java" ]; then
+        sdk install java "$sdk_java" </dev/null && sdk default java "$sdk_java"
+    else
+        sdk install java </dev/null
+    fi
+    touch "$STATE/sdkman.done"
+fi
+
+if [ ! -f "$STATE/rust.done" ] && command -v rustup >/dev/null; then
+    rustup default stable && rustup component add rust-analyzer clippy rustfmt || true
+    touch "$STATE/rust.done"
+fi
+exit 0

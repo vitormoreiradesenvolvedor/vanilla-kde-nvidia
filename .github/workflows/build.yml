@@ -1,0 +1,173 @@
+name: Build image, release and ISO
+
+# push na main      -> imagem OCI + nova tag/release + ISO anexada na release
+# workflow_dispatch -> idem
+# schedule (semanal) -> so reconstroi a imagem :latest (atualizacoes do Debian/apps)
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'LICENSE.txt'
+  workflow_dispatch:
+  schedule:
+    - cron: '0 6 * * 1'
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  IMAGE_NAME: vanilla-kde-nvidia
+  BUILDX_NO_DEFAULT_ATTESTATIONS: 1
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.v.outputs.tag }}
+      image: ${{ steps.v.outputs.image }}
+    steps:
+      - id: v
+        run: |
+          owner="$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')"
+          echo "tag=v$(date -u +%Y.%m.%d)-${{ github.run_number }}" >> "$GITHUB_OUTPUT"
+          echo "image=ghcr.io/${owner}/${IMAGE_NAME}" >> "$GITHUB_OUTPUT"
+
+  image:
+    needs: version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      digest: ${{ steps.build.outputs.digest }}
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost /usr/local/.ghcup
+          sudo docker image prune --all --force
+          df -h /
+
+      - uses: actions/checkout@v7
+
+      - name: Generate Containerfile (Vib)
+        uses: vanilla-os/vib-gh-action@v1.1.0
+        with:
+          recipe: 'recipe.yml'
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Containerfile
+          path: Containerfile
+          overwrite: true
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tags
+        id: tags
+        run: |
+          IMAGE='${{ needs.version.outputs.image }}'
+          if [ '${{ github.event_name }}' = 'schedule' ]; then
+            echo "list=${IMAGE}:latest" >> "$GITHUB_OUTPUT"
+          else
+            echo "list=${IMAGE}:latest,${IMAGE}:${{ needs.version.outputs.tag }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build and push
+        id: build
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: Containerfile
+          platforms: linux/amd64
+          push: true
+          provenance: false
+          tags: ${{ steps.tags.outputs.list }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+            org.opencontainers.image.revision=${{ github.sha }}
+            org.opencontainers.image.version=${{ needs.version.outputs.tag }}
+
+  release:
+    if: github.event_name != 'schedule'
+    needs: [version, image]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - name: Create tag and release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG='${{ needs.version.outputs.tag }}'
+          IMAGE='${{ needs.version.outputs.image }}'
+          {
+            echo "## Imagem OCI"
+            echo
+            echo '```'
+            echo "${IMAGE}:${TAG}"
+            echo "${IMAGE}@${{ needs.image.outputs.digest }}"
+            echo '```'
+            echo
+            echo "Sistema ja instalado: \`abroot upgrade\` (segue \`${IMAGE}:latest\`)."
+            echo
+            echo "A ISO e anexada a esta release pelo job **iso** alguns minutos depois."
+          } > notes.md
+          gh release create "$TAG" --target '${{ github.sha }}' --title "$TAG" --notes-file notes.md --generate-notes
+
+  iso:
+    if: github.event_name != 'schedule'
+    needs: [version, image, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    container:
+      image: ghcr.io/vanilla-os/pico:latest
+      volumes:
+        - /proc:/proc
+        - /:/run/host
+      options: --privileged -it
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install build deps
+        run: apt-get update && apt-get install -y debootstrap gh
+
+      - name: Point installer to this release image
+        run: |
+          sed -i "s#@OCI_IMAGE@#${{ needs.version.outputs.image }}:${{ needs.version.outputs.tag }}#" \
+            iso/etc/config/hooks/live/005-set-custom-image.chroot
+          grep OCI_IMAGE= iso/etc/config/hooks/live/005-set-custom-image.chroot
+
+      - name: Build ISO
+        working-directory: iso
+        run: ./build.sh etc/terraform.conf
+
+      - name: Split ISO if over GitHub 2 GiB asset limit
+        working-directory: iso/builds/amd64
+        run: |
+          ls -la
+          for iso in *.iso; do
+            if [ "$(stat -c %s "$iso")" -ge 2147483000 ]; then
+              split -b 1900M -d -a 2 "$iso" "$iso.part"
+              rm "$iso"
+              echo "ISO dividida. Junte com: cat $iso.part* > $iso" > "$iso.JOIN.txt"
+            fi
+          done
+          ls -la
+
+      - name: Upload ISO to release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload '${{ needs.version.outputs.tag }}' iso/builds/amd64/* --clobber --repo '${{ github.repository }}'

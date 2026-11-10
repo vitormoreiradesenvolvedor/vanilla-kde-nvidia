@@ -1,0 +1,7 @@
+name: misc-setup
+type: shell
+commands:
+  # remove first-setup
+  - apt remove -y vanilla-first-setup
+  # Make init.d scripts executable
+  - chmod +x /usr/share/init.d/*

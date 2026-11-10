@@ -1,0 +1,19 @@
+# Wine com suporte a programas Windows 32 bits.
+# O Wine do Debian e compilado em modo WoW64 (libwine amd64 ja inclui as DLLs
+# i386-windows), entao .exe 32 bits rodam sem multiarch i386. Isso evita o
+# descompasso de binNMU entre amd64 e i386 no Debian sid, onde i386 e parcial.
+name: wine
+type: apt
+sources:
+  - packages:
+    - wine
+    - wine64
+    - libwine
+    - winetricks
+    - fonts-wine
+    - cabextract
+modules:
+  - name: wine-check-wow64
+    type: shell
+    commands:
+      - test -d /usr/lib/x86_64-linux-gnu/wine/i386-windows

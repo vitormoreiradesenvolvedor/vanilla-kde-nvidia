@@ -1,0 +1,7 @@
+name: power
+type: apt
+sources:
+  - packages:
+    - power-profiles-daemon
+    - powermgmt-base
+    - switcheroo-control

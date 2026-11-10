@@ -1,0 +1,10 @@
+name: plasma-apps
+type: apt
+sources:
+  - packages:
+    - dolphin
+    - konsole
+    - kfind
+    - kdeconnect
+    - kdialog
+    - kaccounts-integration

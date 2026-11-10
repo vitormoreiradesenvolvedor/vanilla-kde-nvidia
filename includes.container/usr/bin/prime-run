@@ -1,0 +1,9 @@
+#!/bin/sh
+# Executa um programa na GPU NVIDIA (PRIME render offload) em notebooks hibridos.
+# Uso: prime-run <programa> [args...]
+export __NV_PRIME_RENDER_OFFLOAD=1
+export __NV_PRIME_RENDER_OFFLOAD_PROVIDER=NVIDIA-G0
+export __GLX_VENDOR_LIBRARY_NAME=nvidia
+export __VK_LAYER_NV_optimus=NVIDIA_only
+export VK_LOADER_DRIVERS_SELECT='nvidia*'
+exec "$@"

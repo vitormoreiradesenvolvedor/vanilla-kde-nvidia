@@ -1,0 +1,15 @@
+[Unit]
+Description=Monta o store do Nix (/var/lib/nix) em /nix
+DefaultDependencies=no
+RequiresMountsFor=/var
+Before=sysinit.target systemd-tmpfiles-setup.service nix-daemon.socket nix-daemon.service
+ConditionPathIsMountPoint=!/nix
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/mkdir -p /var/lib/nix
+ExecStart=/usr/bin/mount --bind /var/lib/nix /nix
+
+[Install]
+WantedBy=sysinit.target

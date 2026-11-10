@@ -1,0 +1,62 @@
+# Driver proprietario NVIDIA (mesmo caminho do Vanilla-OS/nvidia-image oficial)
+# configurado para notebooks hibridos (Intel/AMD iGPU + NVIDIA dGPU, PRIME render offload).
+name: nvidia-hybrid
+type: shell
+commands:
+  - "#empty"
+modules:
+  - name: patch-nvidia-kernel-dkms
+    type: shell
+    sources:
+      - type: file
+        url: https://bugs.debian.org/cgi-bin/bugreport.cgi?att=2;bug=1148283;filename=nvidia-550-linux-7.2.patch;msg=28
+        checksum: 0d233727ca9031b3dd063210d19819e8b446243909020a7ef0b7575e7d24ba2f
+    commands:
+      - apt download nvidia-kernel-dkms
+      - dpkg --unpack nvidia-kernel-dkms*.deb
+      - rm nvidia-kernel-dkms*.deb
+      - cd /usr/src/nvidia-current-550.163.01
+      - patch -p1 < /sources/patch-nvidia-kernel-dkms/bugreport/patch-nvidia-kernel-dkms.patch\;msg\=28
+      - dpkg --configure -a
+    cleanup:
+      - /var/lib/dkms/mok.key
+    modules:
+      - name: nvidia-kernel-dkms-deps-install
+        type: apt
+        sources:
+          - packages:
+              - dkms
+              - firmware-nvidia-gsp
+              - nvidia-installer-cleanup
+              - nvidia-kernel-support--v1
+
+  - name: install-nvidia
+    type: apt
+    sources:
+      - packages:
+        - nvidia-driver
+        - nvidia-vaapi-driver
+        - nvidia-settings
+        - nvidia-smi
+        - nvidia-powerd
+        - firmware-misc-nonfree
+        - switcheroo-control
+        - nvtop
+        - mesa-utils
+        - vulkan-tools
+    cleanup:
+      - /var/lib/dkms/mok.key
+
+  - name: nvidia-sysd-units
+    type: shell
+    commands:
+    - mkdir -p /etc/systemd/system/systemd-suspend.service.wants
+    - mkdir -p /etc/systemd/system/systemd-hibernate.service.wants
+    - mkdir -p /etc/systemd/system/multi-user.target.wants
+    - ln -sf /usr/lib/systemd/system/nvidia-suspend.service /etc/systemd/system/systemd-suspend.service.wants/nvidia-suspend.service
+    - ln -sf /usr/lib/systemd/system/nvidia-hibernate.service /etc/systemd/system/systemd-hibernate.service.wants/nvidia-hibernate.service
+    - ln -sf /usr/lib/systemd/system/nvidia-resume.service /etc/systemd/system/systemd-hibernate.service.wants/nvidia-resume.service
+    - ln -sf /usr/lib/systemd/system/nvidia-resume.service /etc/systemd/system/systemd-suspend.service.wants/nvidia-resume.service
+    - ln -sf /usr/lib/systemd/system/nvidia-powerd.service /etc/systemd/system/multi-user.target.wants/nvidia-powerd.service
+    - ln -sf /usr/lib/systemd/system/switcheroo-control.service /etc/systemd/system/multi-user.target.wants/switcheroo-control.service
+    - chmod +x /usr/bin/prime-run

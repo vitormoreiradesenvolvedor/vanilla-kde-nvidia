@@ -1,0 +1,7 @@
+# No Vanilla OS /opt vira link para /var/opt (ABRoot). Tudo que foi instalado
+# em /opt na imagem vai para /usr/lib/opt e e religado via tmpfiles.d no boot.
+name: relocate-opt
+type: shell
+commands:
+  - chmod +x /usr/libexec/relocate-opt
+  - /usr/libexec/relocate-opt

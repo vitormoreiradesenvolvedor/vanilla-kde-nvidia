@@ -1,0 +1,12 @@
+[Unit]
+Description=Instala SDKMAN (Java mais recente) e Rust stable para o usuario
+After=graphical-session-pre.target network-online.target
+ConditionPathExists=!%h/.local/state/devtools-bootstrap/rust.done
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/devtools-user-bootstrap
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=default.target

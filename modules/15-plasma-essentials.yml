@@ -1,0 +1,148 @@
+name: plasma-essentials
+type: shell
+commands:
+  - "#empty"
+
+modules:
+  - name: plasma-welcome
+    type: shell
+    sources:
+      - type: file
+        url: https://github.com/Vanilla-KDE/plasma-welcome/releases/download/continuous/plasma-welcome-amd64.deb
+        checksum: 0883707e2a878361b7d4427fc9fae9a416407757b728fe498675755362b1491d
+        only-arches: [amd64]
+      - type: file
+        url: https://github.com/Vanilla-KDE/plasma-welcome/releases/download/continuous/plasma-welcome-arm64.deb
+        checksum: 2adfb96808dd23e77f985e2a9152fdf68222035f02c4891d9aaf4891f543a18f
+        only-arches: [arm64]
+    commands:
+      - apt install -y /sources/plasma-welcome/plasma-welcome-*/plasma-welcome.deb
+
+  - name: plasma
+    type: apt
+    sources:
+      - packages:
+        - plasma-desktop
+        - plasma-workspace-wallpapers
+
+        - udisks2
+        - upower
+
+        - kde-inotify-survey
+        - libpam-fprintd
+
+        - kwalletmanager
+        - ksshaskpass
+
+        - plasma-discover-backend-flatpak
+        - kde-config-fcitx5
+
+  - name: plasma-build-deps
+    type: apt
+    sources:
+      - packages:
+        - cmake
+        - extra-cmake-modules
+        - build-essential
+        - qt6-base-dev
+        - qt6-tools-dev-tools
+        - qt6-declarative-dev
+        - qt6-wayland-dev
+        - qt6-shadertools-dev
+        - libkf6coreaddons-dev
+        - libkf6i18n-dev
+        - libkf6package-dev
+        - libkf6config-dev
+        - libkf6auth-dev
+        - libkf6dbusaddons-dev
+        - libkf6kcmutils-dev  
+        - libkf6kio-dev
+        - libkscreen-dev
+        - libvulkan-dev
+        - liblayershellqtinterface-dev
+        - libpam0g-dev
+        - libsystemd-dev
+        - pkg-config
+        - plasma-desktop-dev
+        - plasma-workspace-dev
+
+  - name: plasma-setup
+    type: shell
+    sources:
+      - url: https://invent.kde.org/plasma/plasma-setup.git
+        type: git
+        tag: v6.7.4
+    commands:
+      - cd /sources/plasma-setup
+      - sed -i 's|wallpapers/Next|wallpapers/FairyTale|g' plasma-setup/src/qml/LandingComponent.qml
+      - sed -i 's|const landscapeFile = "5120x2880.png";|const landscapeFile = "9556x4096.webp";|' plasma-setup/src/qml/LandingComponent.qml
+      - sed -i 's|const portraitFile  = "1440x2960.png";|const portraitFile  = "9556x4096.webp";|' plasma-setup/src/qml/LandingComponent.qml  
+      - cmake -S plasma-setup -B plasma-setup/build/ -DQT_QML_IMPORT_PATH=/usr/lib/x86_64-linux-gnu/qt6/qml -DCMAKE_BUILD_TYPE=Release
+      - cmake --build plasma-setup/build/ --parallel
+      - cmake --install plasma-setup/build/
+      - systemd-sysusers
+      - systemctl enable plasma-setup.service
+
+  - name: plasma-login-manager
+    type: shell
+    sources:
+      - url: https://github.com/Vanilla-KDE/plasma-login-manager.git
+        type: git
+        tag: v6.7.4
+    commands:
+      - cd /sources/plasma-login-manager
+
+      # Patches for default avatar
+      - rm plasma-login-manager/src/frontend/greeter/qml/faces/.face.icon 
+      - mv /etc/skel/.face /etc/skel/.face.icon
+      - cp /etc/skel/.face.icon plasma-login-manager/src/frontend/greeter/qml/faces/
+      
+      # Remove X11 session
+      - rm /usr/share/xsessions/plasmax11.desktop
+
+      - 'ln -s "$(pkg-config --variable=pcfiledir libsystemd)/libsystemd.pc" "$(pkg-config --variable=pcfiledir libsystemd)/systemd.pc"'
+      - cmake -S plasma-login-manager -B plasma-login-manager/build -DCMAKE_BUILD_TYPE=Release
+      - make install -C plasma-login-manager/build
+      - systemd-sysusers
+      - systemctl enable plasmalogin
+
+  - name: plasma-wallpaper
+    type: shell
+    commands:
+      - sed -i 's/^defaultWallpaperTheme=Next/defaultWallpaperTheme=FairyTale/' /usr/share/plasma/desktoptheme/*/plasmarc
+      - sed -i 's/^defaultFileSuffix=\.png/defaultFileSuffix=.webp/' /usr/share/plasma/desktoptheme/*/plasmarc
+      - sed -i 's/^Image=Next/Image=FairyTale/' /usr/share/plasma/look-and-feel/*/contents/defaults
+
+  - name: plasma-discover-backend
+    type: shell
+    sources:
+      - type: file
+        url: https://github.com/Vanilla-KDE/discover-vso-backend/releases/download/continuous/libvanillavso-backend_amd64.so
+        checksum: 404d14a2b0ec6b4d48e38d27fe61920d1eec489111e7f7565db807d54fdc7027
+        only-arches: [amd64]
+      - type: file
+        url: https://github.com/Vanilla-KDE/discover-vso-backend/releases/download/continuous/libvanillavso-backend_arm64.so
+        checksum: 2403da3728aa3f4ee5d095c10317a2d0c05a40a23b0bc71cc93f7ad6669fa3ad
+        only-arches: [arm64]
+    commands:
+      - ARCH=$(dpkg --print-architecture)
+      - rm /usr/lib/*/qt6/plugins/discover/packagekit-backend.so
+      - mv /sources/plasma-discover-backend/libvanillavso-backend_${ARCH}/plasma-discover-backend.so /sources/plasma-discover-backend/libvanillavso-backend_${ARCH}/libvanillavso-backend.so
+      - cp /sources/plasma-discover-backend/libvanillavso-backend_${ARCH}/libvanillavso-backend.so /usr/lib/*/qt6/plugins/discover/
+
+  - name: plasma-discover-backend-kauth
+    type: shell
+    sources:
+      - type: file
+        url: https://github.com/Vanilla-KDE/discover-vso-backend/releases/download/continuous/vanillavso_kauth_helper_amd64.bin
+        checksum: 5bc557615e3ad91fab49c30818c480d91c426aa3bedee706a947cd6d8a8d7467
+        only-arches: [amd64]
+      - type: file
+        url: https://github.com/Vanilla-KDE/discover-vso-backend/releases/download/continuous/vanillavso_kauth_helper_arm64.bin
+        checksum: a1cae731b27cb961d899b68c4dc254522cfd89f3ea57f5a75ab4f39910540f29
+        only-arches: [arm64]
+    commands:
+      - ARCH=$(dpkg --print-architecture)      
+      - mv /sources/plasma-discover-backend-kauth/vanillavso_kauth_helper_${ARCH}/plasma-discover-backend-kauth.bin /sources/plasma-discover-backend-kauth/vanillavso_kauth_helper_${ARCH}/vanillavso_kauth_helper
+
+      - cp /sources/plasma-discover-backend-kauth/vanillavso_kauth_helper_${ARCH}/vanillavso_kauth_helper /usr/lib/kf6/kauth/libexec/

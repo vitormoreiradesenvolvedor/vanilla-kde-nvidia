@@ -1,0 +1,7 @@
+# Mantem toolchain C/C++ (build-essential, cmake, make, pkg-config) para desenvolvimento
+name: cleanup
+type: shell
+commands:
+  - apt-get remove -y extra-cmake-modules qt6-base-dev qt6-tools-dev-tools qt6-declarative-dev qt6-wayland-dev qt6-shadertools-dev libkf6coreaddons-dev libkf6i18n-dev libkf6package-dev libkf6config-dev libkf6auth-dev libkf6dbusaddons-dev libkf6kcmutils-dev libkf6kio-dev libkscreen-dev libvulkan-dev liblayershellqtinterface-dev libpam0g-dev plasma-desktop-dev plasma-workspace-dev libadwaita-1-dev libnm-dev libnma-gtk4-dev dh-sequence-gnome debhelper papers zutty || true
+  - apt-get autoremove -y
+  - apt-get clean

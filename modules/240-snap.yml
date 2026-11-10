@@ -1,0 +1,10 @@
+name: snap
+type: shell
+commands:
+  - apt-mark unhold snapd plasma-discover-backend-snap || true
+  - apt-get install -y snapd plasma-discover-backend-snap
+  - ln -sfn /var/lib/snapd/snap /snap
+  - mkdir -p /etc/systemd/system/sockets.target.wants /etc/systemd/system/multi-user.target.wants
+  - ln -sf /usr/lib/systemd/system/snapd.socket /etc/systemd/system/sockets.target.wants/snapd.socket
+  - ln -sf /usr/lib/systemd/system/snapd.apparmor.service /etc/systemd/system/multi-user.target.wants/snapd.apparmor.service
+  - ln -sf /usr/lib/systemd/system/snapd.seeded.service /etc/systemd/system/multi-user.target.wants/snapd.seeded.service

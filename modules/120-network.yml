@@ -1,0 +1,5 @@
+name: network
+type: apt
+sources:
+  - packages:
+    - network-manager

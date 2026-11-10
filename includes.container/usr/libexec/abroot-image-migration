@@ -1,0 +1,3 @@
+#!/bin/bash
+# Nada a migrar nesta imagem.
+exit 0

@@ -1,0 +1,47 @@
+#!/bin/bash
+# Move tudo que pacotes instalaram em /opt para /usr/lib/opt. No sistema
+# instalado /opt e um link para /var/opt (ABRoot), entao recriamos os links
+# via tmpfiles.d e reescrevemos units/symlinks que apontavam para /opt.
+set -euo pipefail
+shopt -s nullglob
+TMPF=/usr/lib/tmpfiles.d/opt-relocated.conf
+mkdir -p /usr/lib/opt
+: > "$TMPF"
+
+for d in /opt/*; do
+    name="$(basename "$d")"
+    rm -rf "/usr/lib/opt/$name"
+    mv "$d" "/usr/lib/opt/$name"
+    printf 'L+ "/var/opt/%s" - - - - /usr/lib/opt/%s\n' "$name" "$name" >> "$TMPF"
+done
+
+# Symlinks que apontam para /opt -> /usr/lib/opt
+while IFS= read -r -d '' link; do
+    target="$(readlink "$link")"
+    case "$target" in
+        /opt/*) ln -sfn "/usr/lib${target}" "$link" ;;
+    esac
+done < <(find /usr/bin /usr/sbin /usr/share/applications /usr/share/icons /usr/share/pixmaps /etc/alternatives /etc/systemd/system -type l -print0 2>/dev/null)
+
+# Units habilitadas direto de /opt (ex.: mullvad-daemon): copia para /usr/lib/systemd/system
+while IFS= read -r -d '' link; do
+    target="$(readlink -f "$link")"
+    case "$target" in
+        /usr/lib/opt/*.service|/usr/lib/opt/*.socket|/usr/lib/opt/*.timer)
+            unit="$(basename "$target")"
+            if [ ! -f "/usr/lib/systemd/system/$unit" ]; then
+                sed 's#\([ ="]\)/opt/#\1/usr/lib/opt/#g' "$target" > "/usr/lib/systemd/system/$unit"
+            fi
+            if [ "$(dirname "$link")" = /etc/systemd/system ] && [ "$(basename "$link")" = "$unit" ]; then
+                rm -f "$link"
+            else
+                ln -sfn "/usr/lib/systemd/system/$unit" "$link"
+            fi
+            ;;
+    esac
+done < <(find /etc/systemd/system -type l -print0)
+
+# Units em /usr/lib/systemd que referenciam /opt
+grep -rlZ '/opt/' /usr/lib/systemd/system 2>/dev/null | xargs -0 -r sed -i 's#\([ ="]\)/opt/#\1/usr/lib/opt/#g'
+
+cat "$TMPF"

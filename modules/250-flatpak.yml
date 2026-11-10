@@ -1,0 +1,7 @@
+# Flathub ja configurado para todo o sistema (sem depender de /var no build)
+name: flatpak
+type: shell
+commands:
+  - apt-get install -y flatpak plasma-discover-backend-flatpak xdg-desktop-portal-kde
+  - mkdir -p /usr/share/flatpak/remotes.d
+  - curl -fsSL -o /usr/share/flatpak/remotes.d/flathub.flatpakrepo https://dl.flathub.org/repo/flathub.flatpakrepo

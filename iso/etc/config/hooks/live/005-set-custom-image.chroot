@@ -1,0 +1,15 @@
+#!/bin/sh
+# Description: Aponta o Vanilla Installer para a imagem OCI deste repositorio.
+# @OCI_IMAGE@ e substituido pelo workflow com a tag da release.
+
+OCI_IMAGE="@OCI_IMAGE@"
+RECIPE=/etc/vanilla-installer/recipe.json
+
+if [ ! -f "$RECIPE" ]; then
+    echo "E: $RECIPE nao encontrado" >&2
+    exit 1
+fi
+
+sed -i -E "s#\"ghcr\.io/vanilla-os/[^\"]+\"#\"${OCI_IMAGE}\"#g" "$RECIPE"
+sed -i -E 's#"distro_name": *"[^"]*"#"distro_name": "Vanilla OS KDE NVIDIA"#' "$RECIPE"
+grep -q "$OCI_IMAGE" "$RECIPE"

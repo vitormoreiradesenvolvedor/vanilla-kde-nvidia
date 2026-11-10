@@ -1,0 +1,14 @@
+# NBFC-Linux (NoteBook FanControl) - mesma versao usada na maquina de origem
+name: nbfc
+type: shell
+sources:
+  - type: file
+    url: https://github.com/nbfc-linux/nbfc-linux/releases/download/0.3.19/nbfc-linux_0.3.19_amd64.deb
+    checksum: 63215e50bfa4ef22569b0f5367a70197b95a6c34fdcae5706232264c5adcd238
+    only-arches: [amd64]
+commands:
+  - apt-get install -y /sources/nbfc/*/*.deb
+  - mkdir -p /etc/systemd/system/multi-user.target.wants
+  - ln -sf /usr/lib/systemd/system/nbfc_service.service /etc/systemd/system/multi-user.target.wants/nbfc_service.service
+  - ln -sf /usr/lib/systemd/system/nbfc-autoconfig.service /etc/systemd/system/multi-user.target.wants/nbfc-autoconfig.service
+  - chmod +x /usr/libexec/nbfc-autoconfig

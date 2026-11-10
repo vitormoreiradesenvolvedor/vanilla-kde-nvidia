@@ -1,0 +1,12 @@
+# DBeaver CE nativo (.deb oficial) com TLS 1.0/1.1 liberado.
+# A liberacao e reaplicada por hook do dpkg sempre que o pacote for
+# reinstalado/atualizado e a cada rebuild da imagem.
+name: dbeaver
+type: shell
+commands:
+  - curl -fsSLo /tmp/dbeaver-ce.deb https://dbeaver.io/files/dbeaver-ce_latest_amd64.deb
+  - apt-get install -y /tmp/dbeaver-ce.deb
+  - rm -f /tmp/dbeaver-ce.deb
+  - chmod +x /usr/libexec/dbeaver-enable-legacy-tls
+  - /usr/libexec/dbeaver-enable-legacy-tls
+  - grep -q 'dbeaver-legacy-tls.security' /usr/share/dbeaver-ce/dbeaver.ini

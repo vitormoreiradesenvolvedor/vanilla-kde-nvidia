@@ -1,0 +1,22 @@
+#!/bin/sh
+# Garante TLS 1.0/1.1 habilitado no DBeaver CE. Idempotente.
+# Chamado no build da imagem e apos toda operacao do dpkg (apt hook),
+# entao sobrevive a atualizacoes do pacote dbeaver-ce.
+INI=/usr/share/dbeaver-ce/dbeaver.ini
+SEC=/etc/dbeaver/dbeaver-legacy-tls.security
+[ -f "$INI" ] || exit 0
+
+if ! grep -q 'dbeaver-legacy-tls.security' "$INI"; then
+    grep -q '^-vmargs' "$INI" || echo '-vmargs' >> "$INI"
+    printf '%s\n' "-Djava.security.properties=$SEC" >> "$INI"
+fi
+if ! grep -q '^-Djdk.tls.client.protocols=' "$INI"; then
+    printf '%s\n' '-Djdk.tls.client.protocols=TLSv1,TLSv1.1,TLSv1.2,TLSv1.3' >> "$INI"
+fi
+
+# Reforco: remove TLSv1/TLSv1.1/3DES da lista de bloqueio do JRE embutido
+for f in /usr/share/dbeaver-ce/jre/conf/security/java.security; do
+    [ -f "$f" ] || continue
+    sed -i -E '/^jdk\.tls\.disabledAlgorithms=/,/[^\\]$/ { s/TLSv1\.1, ?//; s/TLSv1, ?//; s/3DES_EDE_CBC, ?// }' "$f"
+done
+exit 0

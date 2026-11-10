@@ -1,0 +1,17 @@
+# Nix (modo multiusuario, nix-daemon). /nix fica no root read-only do ABRoot,
+# entao o store real vive em /var/lib/nix e e montado em /nix no boot (nix-bind.service).
+name: nix
+type: apt
+sources:
+  - packages:
+    - nix-bin
+    - nix-setup-systemd
+modules:
+  - name: nix-setup
+    type: shell
+    commands:
+      - mkdir -p /nix /etc/nix
+      - grep -q '^experimental-features' /etc/nix/nix.conf 2>/dev/null || echo 'experimental-features = nix-command flakes' >> /etc/nix/nix.conf
+      - mkdir -p /etc/systemd/system/sysinit.target.wants /etc/systemd/system/sockets.target.wants
+      - ln -sf /usr/lib/systemd/system/nix-bind.service /etc/systemd/system/sysinit.target.wants/nix-bind.service
+      - ln -sf /usr/lib/systemd/system/nix-daemon.socket /etc/systemd/system/sockets.target.wants/nix-daemon.socket

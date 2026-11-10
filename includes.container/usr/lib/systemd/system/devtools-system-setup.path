@@ -1,0 +1,9 @@
+[Unit]
+Description=Reaplica setup de dev quando usuarios mudam
+
+[Path]
+PathChanged=/etc/passwd
+Unit=devtools-system-setup.service
+
+[Install]
+WantedBy=multi-user.target

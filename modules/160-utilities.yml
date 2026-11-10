@@ -1,0 +1,8 @@
+name: utilities
+type: apt
+sources:
+  - packages:
+    - ghostscript
+    - zenity
+    - flatpak
+    - locales-all

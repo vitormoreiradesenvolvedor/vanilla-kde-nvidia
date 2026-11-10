@@ -1,0 +1,54 @@
+#!/bin/bash
+
+KONSOLE_RC="$HOME/.config/konsolerc"
+PROFILE_DIR="$HOME/.local/share/konsole"
+PROFILE_FILE="$PROFILE_DIR/apx-vso-native.profile"
+PROFILE_NAME="apx-vso-native"
+
+
+if [ "$1" == "--tty" ]; then
+    echo "Are you sure you want to reset the VSO? This will remove all your installed software in the subsystem. [y/N]"
+    read -r answer
+    if [ "$answer" != "y" ]; then
+        exit
+    fi
+else
+    adwdialog --title "Reset VSO?" \
+              --description "Are you sure you want to reset the VSO? This will remove all your installed software in the subsystem." \
+              --type "question" \
+              --icon "org.vanillaos.VSO"
+    if [ $? -ne 0 ]; then
+        exit
+    fi
+fi
+
+CONTAINER_ID=$(podman ps -a --filter name=apx-vso-native --no-trunc -q)
+if [ -n "$CONTAINER_ID" ]; then
+    CURRENT_DEFAULT=$(kwriteconfig6 --file "$KONSOLE_RC" --group "Desktop Entry" --key "DefaultProfile" 2>/dev/null || echo "")
+    
+    if [ "$CURRENT_DEFAULT" == "${PROFILE_NAME}.profile" ]; then
+        kwriteconfig6 --file "$KONSOLE_RC" --group "Desktop Entry" --key "DefaultProfile" --delete
+    fi
+    
+    rm -f "$PROFILE_FILE"
+fi
+
+podman rm -f apx-vso-native
+
+if [ "$1" == "--tty" ]; then
+    echo "VSO subsystem has been removed successfully. Do you want to re-initialize it now? [y/N]"
+    read -r answer
+    if [ "$answer" != "y" ]; then
+        exit
+    fi
+else
+    adwdialog --title "Re-initialize VSO?" \
+              --description "VSO subsystem has been removed successfully. Do you want to re-initialize it now?" \
+              --type "question" \
+              --icon "org.vanillaos.VSO"
+    if [ $? -ne 0 ]; then
+        exit
+    fi
+fi
+
+vso native init

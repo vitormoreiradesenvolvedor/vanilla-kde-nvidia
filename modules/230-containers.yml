@@ -1,0 +1,18 @@
+name: containers
+type: apt
+sources:
+  - packages:
+    - docker.io
+    - docker-cli
+    - docker-compose
+    - docker-buildx
+    - containerd
+modules:
+  - name: containers-enable
+    type: shell
+    commands:
+      - mkdir -p /etc/systemd/system/sockets.target.wants /etc/systemd/system/multi-user.target.wants
+      - ln -sf /usr/lib/systemd/system/docker.socket /etc/systemd/system/sockets.target.wants/docker.socket
+      - ln -sf /usr/lib/systemd/system/docker.service /etc/systemd/system/multi-user.target.wants/docker.service
+      - ln -sf /usr/lib/systemd/system/containerd.service /etc/systemd/system/multi-user.target.wants/containerd.service
+      - groupadd -f docker

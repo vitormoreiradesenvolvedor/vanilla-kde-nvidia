@@ -1,0 +1,15 @@
+# Homebrew: snapshot embutido na imagem, extraido em /home/linuxbrew quando
+# o primeiro usuario existir (devtools-system-setup). Grupos docker/nix-users idem.
+name: homebrew
+type: shell
+commands:
+  - git clone --depth 1 https://github.com/Homebrew/brew /tmp/homebrew/.linuxbrew/Homebrew
+  - mkdir -p /tmp/homebrew/.linuxbrew/bin
+  - ln -s ../Homebrew/bin/brew /tmp/homebrew/.linuxbrew/bin/brew
+  - mkdir -p /usr/share/homebrew
+  - tar --zstd -cf /usr/share/homebrew/homebrew.tar.zst -C /tmp/homebrew .linuxbrew
+  - rm -rf /tmp/homebrew
+  - mkdir -p /etc/systemd/system/multi-user.target.wants
+  - ln -sf /usr/lib/systemd/system/devtools-system-setup.service /etc/systemd/system/multi-user.target.wants/devtools-system-setup.service
+  - ln -sf /usr/lib/systemd/system/devtools-system-setup.path /etc/systemd/system/multi-user.target.wants/devtools-system-setup.path
+  - grep -q 'profile.d/devtools.sh' /etc/bash.bashrc || echo '[ -f /etc/profile.d/devtools.sh ] && . /etc/profile.d/devtools.sh' >> /etc/bash.bashrc

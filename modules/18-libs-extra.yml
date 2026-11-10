@@ -1,0 +1,14 @@
+name: libs-extra
+type: apt
+sources:
+  - packages:
+    - libatk-adaptor
+    - libnotify-bin
+
+    - libwmf-0.2-7-gtk
+    - libwacom9
+
+    - libavif-gdk-pixbuf
+    - ffmpegthumbnailer
+    - gnome-epub-thumbnailer
+    - ooo-thumbnailer

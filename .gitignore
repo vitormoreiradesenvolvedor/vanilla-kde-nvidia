@@ -1,0 +1,5 @@
+Containerfile
+sources/
+plugins/
+iso/builds/
+iso/tmp/

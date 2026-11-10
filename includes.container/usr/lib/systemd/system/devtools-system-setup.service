@@ -1,0 +1,10 @@
+[Unit]
+Description=Grupos docker/nix-users e Homebrew para usuarios
+After=local-fs.target systemd-sysusers.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/devtools-system-setup
+
+[Install]
+WantedBy=multi-user.target

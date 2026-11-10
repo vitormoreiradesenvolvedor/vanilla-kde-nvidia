@@ -1,0 +1,51 @@
+name: dev-tools
+type: apt
+sources:
+  - packages:
+    # C / C++
+    - build-essential
+    - gcc
+    - g++
+    - gdb
+    - gdc
+    - clang
+    - clangd
+    - lldb
+    - cmake
+    - ninja-build
+    - make
+    - autoconf
+    - automake
+    - libtool
+    - pkg-config
+    - valgrind
+    # Git
+    - git
+    - git-lfs
+    # Python
+    - python3
+    - python3-pip
+    - python3-venv
+    - python3-dev
+    - pipx
+    # Node.js (node, npm, npx)
+    - nodejs
+    - npm
+    # Rust (toolchain instalada por usuario via rustup no primeiro login)
+    - rustup
+    # Utilitarios
+    - zip
+    - unzip
+    - tar
+    - xz-utils
+    - htop
+    - vim
+    - openssh-client
+    - libssl-dev
+modules:
+  - name: dev-tools-user-bootstrap
+    type: shell
+    commands:
+      - chmod +x /usr/libexec/devtools-user-bootstrap
+      - mkdir -p /usr/lib/systemd/user/default.target.wants
+      - ln -sf /usr/lib/systemd/user/devtools-user-bootstrap.service /usr/lib/systemd/user/default.target.wants/devtools-user-bootstrap.service

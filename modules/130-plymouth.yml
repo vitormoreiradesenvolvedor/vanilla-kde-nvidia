@@ -1,0 +1,6 @@
+name: plymouth
+type: apt
+sources:
+  - packages:
+    - plymouth
+    - plymouth-themes

@@ -1,0 +1,128 @@
+name: Vanilla KDE NVIDIA
+id: vanilla-kde-nvidia
+vibversion: 1.1.0
+
+stages:
+- id: build
+  base: ghcr.io/vanilla-os/core:latest
+  addincludes: true
+  singlelayer: false
+  labels:
+    maintainer: Vitor Moreira
+    org.opencontainers.image.source: https://github.com/vitormoreiradesenvolvedor/vanilla-kde-nvidia
+    org.opencontainers.image.description: Vanilla OS 3 com KDE Plasma, NVIDIA para notebooks hibridos e ferramentas de desenvolvimento
+  args:
+    DEBIAN_FRONTEND: noninteractive
+  runs:
+    commands:
+      - echo 'APT::Install-Recommends "1";' > /etc/apt/apt.conf.d/01norecommends
+  cleanup:
+    - /boot/initrd.img*
+    - /tmp/*
+    - /var/cache/apt/pkgcache.bin
+    - /var/cache/apt/srcpkgcache.bin
+    - /var/cache/debconf
+    - /var/cache/dictionaries-common
+    - /var/cache/fontconfig
+    - /var/cache/ldconfig
+    - /var/cache/man
+    - /var/lib/dbus/machine-id
+    - /var/log/*
+
+  modules:
+  - name: init-setup
+    type: shell
+    commands:
+    - echo 'PATH="/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/usr/games:/usr/local/games"' > /etc/environment
+    - sed -i '4,10d' /etc/profile
+    - apt-get update
+    - apt-get clean
+    - apt-get -y install squashfs-tools minisign curl wget ca-certificates gnupg jq rsync
+    - mkdir -p /usr/lib/opt
+
+  - name: vanilla-tools
+    type: shell
+    sources:
+      - type: tar
+        url: https://github.com/Vanilla-OS/vanilla-tools/releases/download/v1.0.1/vanilla-tools-amd64.tar.gz
+        checksum: aef32f07820e0993e534e6bccfa1a6daae6c8c6f0543d3e073f4f121f2ef2e31
+        only-arches: [amd64]
+    commands:
+    - mkdir -p /usr/bin
+    - cp /sources/vanilla-tools/vanilla-tools*/vanilla-tools/lpkg /usr/bin/lpkg
+    - cp /sources/vanilla-tools/vanilla-tools*/vanilla-tools/cur-gpu /usr/bin/cur-gpu
+    - cp /sources/vanilla-tools/vanilla-tools*/vanilla-tools/nrun /usr/bin/nrun
+    - cp /sources/vanilla-tools/vanilla-tools*/vanilla-tools/prime-switch /usr/bin/prime-switch
+    - chmod +x /usr/bin/lpkg /usr/bin/cur-gpu /usr/bin/nrun /usr/bin/prime-switch
+
+  # Base desktop do Vanilla OS (portado de Vanilla-KDE/base-image)
+  - name: base-modules
+    type: includes
+    includes:
+      - modules/00-vanilla-desktop-base.yml
+      - modules/00-vanilla-system-operator.yml
+      - modules/00-vanilla-first-setup.yml
+      - modules/00-vanilla-apx-wrapper.yml
+      - modules/00-vanilla-sideload.yml
+      - modules/00-vanilla-updates-utility.yml
+      - modules/00-vanilla-prime-utility.yml
+      - modules/00-vanilla-migration.yml
+      - modules/03-fswarn.yml
+      - modules/10-vanilla-abroot-rollback-notifier.yml
+      - modules/18-libs-extra.yml
+      - modules/50-laptop-goodies.yml
+      - modules/60-media.yml
+      - modules/80-printers.yml
+      - modules/100-accessibility.yml
+      - modules/110-fonts.yml
+      - modules/120-network.yml
+      - modules/121-disable-ssh-daemon.yml
+      - modules/130-plymouth.yml
+      - modules/131-plymouth-theme-vanilla.yml
+      - modules/140-password.yml
+      - modules/160-utilities.yml
+
+  # KDE Plasma (portado de Vanilla-KDE/desktop-image)
+  - name: plasma-modules
+    type: includes
+    includes:
+      - modules/00-vanilla-backgrounds.yml
+      - modules/15-plasma-essentials.yml
+      - modules/17-plasma-apps.yml
+
+  # Extras deste repositorio
+  - name: custom-modules
+    type: includes
+    includes:
+      - modules/200-nvidia-hybrid.yml
+      - modules/210-nbfc.yml
+      - modules/220-dev-tools.yml
+      - modules/230-containers.yml
+      - modules/240-snap.yml
+      - modules/250-flatpak.yml
+      - modules/260-nix.yml
+      - modules/270-vpn.yml
+      - modules/280-wine.yml
+      - modules/290-chrome.yml
+      - modules/300-dbeaver.yml
+      - modules/310-homebrew.yml
+      - modules/320-appimage-junction.yml
+      - modules/990-relocate-opt.yml
+      - modules/997-misc-setup.yml
+      - modules/999-cleanup.yml
+
+  - name: cleanup-and-sysconf-setup
+    type: shell
+    commands:
+    - apt-get autoremove -y
+    - apt-get clean
+    - lpkg --lock
+    - rsync -a /etc/ /sysconf/
+    cleanup:
+    - /sysconf/resolv.conf
+
+- id: initrd
+  base: build
+  runs:
+    commands:
+      - touch $(readlink -f /initrd.img)

@@ -1,0 +1,4 @@
+# Sobrescreve java.security do JRE do DBeaver para liberar TLS 1.0/1.1 e 3DES
+# (servidores legados, ex.: SQL Server antigo). Carregado via
+# -Djava.security.properties no dbeaver.ini.
+jdk.tls.disabledAlgorithms=SSLv3, RC4, DES, MD5withRSA, DH keySize < 1024, EC keySize < 224, anon, NULL, ECDH

@@ -1,0 +1,23 @@
+#!/bin/bash
+# Seleciona automaticamente o perfil NBFC do notebook no primeiro boot.
+# Se o usuario ja tiver configurado (/etc/nbfc/nbfc.json), nao mexe.
+set -u
+CONF=/etc/nbfc/nbfc.json
+[ -s "$CONF" ] && exit 0
+mkdir -p /etc/nbfc
+
+if nbfc config --set auto >/dev/null 2>&1 && [ -s "$CONF" ]; then
+    exit 0
+fi
+
+# Fallback: procura um perfil com o nome exato do modelo (DMI)
+model="$(cat /sys/class/dmi/id/product_name 2>/dev/null)"
+vendor="$(cat /sys/class/dmi/id/sys_vendor 2>/dev/null)"
+for candidate in "$vendor $model" "$model" "Acer $model"; do
+    if [ -f "/usr/share/nbfc/configs/$candidate.json" ]; then
+        printf '{\n   "SelectedConfigId": "%s"\n}\n' "$candidate" > "$CONF"
+        exit 0
+    fi
+done
+echo "nbfc-autoconfig: nenhum perfil encontrado para '$vendor $model'. Rode: nbfc config -r" >&2
+exit 0

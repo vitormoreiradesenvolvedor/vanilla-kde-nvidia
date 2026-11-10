@@ -1,0 +1,25 @@
+#!/bin/bash
+# Configuracao de sistema que depende dos usuarios existirem:
+#  - adiciona usuarios humanos aos grupos docker / nix-users
+#  - extrai o Homebrew em /home/linuxbrew para o primeiro usuario
+set -u
+
+mapfile -t users < <(getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 && $7 !~ /(nologin|false)$/ {print $1}')
+[ "${#users[@]}" -eq 0 ] && exit 0
+
+for g in docker nix-users; do
+    getent group "$g" >/dev/null || groupadd -r "$g"
+    for u in "${users[@]}"; do
+        id -nG "$u" | tr ' ' '\n' | grep -qx "$g" || usermod -aG "$g" "$u"
+    done
+done
+
+# Homebrew
+BREW_PREFIX=/home/linuxbrew/.linuxbrew
+if [ ! -x "$BREW_PREFIX/bin/brew" ] && [ -f /usr/share/homebrew/homebrew.tar.zst ]; then
+    owner="${users[0]}"
+    mkdir -p /home/linuxbrew
+    tar --zstd -xf /usr/share/homebrew/homebrew.tar.zst -C /home/linuxbrew
+    chown -R "$owner:$(id -gn "$owner")" /home/linuxbrew
+fi
+exit 0

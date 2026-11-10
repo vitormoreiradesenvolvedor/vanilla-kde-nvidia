@@ -1,0 +1,4 @@
+name: disable-ssh-daemon
+type: shell
+commands:
+  - systemctl disable ssh.service

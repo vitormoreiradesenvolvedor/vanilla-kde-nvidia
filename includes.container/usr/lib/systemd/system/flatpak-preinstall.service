@@ -1,0 +1,14 @@
+[Unit]
+Description=Instala Flatpaks padrao (Gear Lever, Junction)
+Wants=network-online.target
+After=network-online.target
+ConditionPathExists=!/var/lib/flatpak/app/re.sonny.Junction/current
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/flatpak-preinstall
+Restart=on-failure
+RestartSec=60
+
+[Install]
+WantedBy=multi-user.target

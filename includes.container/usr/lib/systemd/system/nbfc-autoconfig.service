@@ -1,0 +1,11 @@
+[Unit]
+Description=Selecao automatica do perfil NBFC
+Before=nbfc_service.service
+ConditionPathExists=!/etc/nbfc/nbfc.json
+
+[Service]
+Type=oneshot
+ExecStart=/usr/libexec/nbfc-autoconfig
+
+[Install]
+WantedBy=multi-user.target

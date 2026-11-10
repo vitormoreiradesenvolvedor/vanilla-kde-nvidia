@@ -1,0 +1,23 @@
+# AppImage (FUSE 2 e 3) + Gear Lever + Junction como navegador padrao.
+# Gear Lever e Junction sao Flatpaks: instalados no 1o boot com rede
+# (flatpak-preinstall.service), pois /var nao vem da imagem no ABRoot.
+name: appimage-junction
+type: apt
+sources:
+  - packages:
+    - fuse3
+    - libfuse3-4
+    - libfuse2t64
+modules:
+  - name: appimage-junction-setup
+    type: shell
+    commands:
+      - chmod +x /usr/libexec/flatpak-preinstall
+      - mkdir -p /etc/systemd/system/multi-user.target.wants
+      - ln -sf /usr/lib/systemd/system/flatpak-preinstall.service /etc/systemd/system/multi-user.target.wants/flatpak-preinstall.service
+      - mkdir -p /etc/skel/.config
+      - touch /etc/skel/.config/mimeapps.list
+      - grep -q '^\[Default Applications\]' /etc/skel/.config/mimeapps.list || printf '[Default Applications]\n' >> /etc/skel/.config/mimeapps.list
+      - sed -i '/^\[Default Applications\]/r /etc/xdg/junction-defaults.list' /etc/skel/.config/mimeapps.list
+      - cp /etc/skel/.config/mimeapps.list /etc/xdg/mimeapps.list
+      - grep -q '^BrowserApplication=' /etc/xdg/kdeglobals 2>/dev/null || printf '[General]\nBrowserApplication=re.sonny.Junction.desktop\n' >> /etc/xdg/kdeglobals

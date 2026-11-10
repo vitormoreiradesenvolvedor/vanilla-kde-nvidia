@@ -1,0 +1,17 @@
+#!/bin/bash
+# Instala Flatpaks do sistema no 1o boot e configura o Junction para enxergar
+# navegadores de todas as origens (nativo, Flatpak sistema/usuario, Snap, AppImage).
+set -euo pipefail
+APPS=(it.mijorus.gearlever re.sonny.Junction)
+
+flatpak remote-add --system --if-not-exists flathub /usr/share/flatpak/remotes.d/flathub.flatpakrepo
+flatpak install --system --noninteractive --or-update flathub "${APPS[@]}"
+
+# Override de sistema. Pastas de usuario (~/.local/share, flatpak --user) sao
+# acrescentadas por usuario em devtools-user-bootstrap.
+flatpak override --system re.sonny.Junction \
+    --talk-name=org.freedesktop.Flatpak \
+    --filesystem=host:ro \
+    --filesystem=/var/lib/flatpak:ro \
+    --filesystem=/var/lib/snapd:ro \
+    --env=XDG_DATA_DIRS=/app/share:/run/host/usr/share:/run/host/usr/local/share:/var/lib/flatpak/exports/share:/var/lib/snapd/desktop:/usr/share
