@@ -29,7 +29,8 @@ modules:
         checksum: b193621139b8f843062d964d2cb2f6b71d4de05bad5f9e457e88f6fd68d09ccc
         only-arches: [amd64]
     commands:
-      - apt-get install -y /sources/wireguird/*/*.deb
+      # submodulos rodam antes do pai: garante openresolv antes do wireguird
+      - apt-get install -y openresolv /sources/wireguird/*/*.deb
 
   # Mullvad VPN (pacote oficial; instala em /opt, realocado em 990-relocate-opt)
   - name: mullvad-vpn
