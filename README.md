@@ -95,8 +95,8 @@ Para editar a política sem rebuild, mexa em `/etc/dbeaver/dbeaver-legacy-tls.se
 | push na `main` / execução manual | Vib gera o `Containerfile` → build e push `ghcr.io/…/vanilla-kde-nvidia:latest` e `:vAAAA.MM.DD-N` → cria a tag e a release `vAAAA.MM.DD-N` → gera a ISO (instalador apontando para a imagem daquela tag) e anexa à release |
 | semanal (segunda 06:00 UTC) | só reconstrói `:latest` (atualizações do Debian, Chrome, DBeaver…) para `abroot upgrade` |
 
-> O pacote no GHCR precisa estar **público** para o ABRoot e o instalador baixarem a imagem:
-> *Packages → vanilla-kde-nvidia → Package settings → Change visibility → Public* (uma vez só).
+> O pacote no GHCR herda a visibilidade pública do repositório (o ABRoot e o instalador baixam a
+> imagem sem login). Se um fork ficar privado: *Package settings → Change visibility → Public*.
 
 ## Créditos
 
