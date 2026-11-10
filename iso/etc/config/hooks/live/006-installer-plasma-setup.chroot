@@ -1,0 +1,61 @@
+#!/bin/sh
+# Description: Adapta o Vanilla Installer para a imagem KDE.
+# O instalador oficial cria um usuario temporario "vanilla" para o first-setup
+# GNOME (autologin GDM, sessao firstsetup, autostart do FirstSetup). A imagem
+# KDE nao tem o first-setup: quem cria o usuario no 1o boot e o plasma-setup.
+# Sem isso o Albius aborta no "cp org.vanillaos.FirstSetup.desktop" e nao roda
+# o resto dos passos. Mesma mudanca do fork Vanilla-KDE/vanilla-installer.
+set -e
+
+PROCESSOR="$(find / -path /proc -prune -o -path '*vanilla_installer/utils/processor.py' -print 2>/dev/null | head -1)"
+[ -n "$PROCESSOR" ] || { echo "E: processor.py do vanilla-installer nao encontrado" >&2; exit 1; }
+
+python3 - "$PROCESSOR" <<'PY'
+import sys
+
+path = sys.argv[1]
+src = open(path).read()
+
+markers = [
+    "groupadd -g 1201 vanilla-first-setup",
+    '"adduser"',
+    "/etc/gdm3/daemon.conf",
+    "Session=firstsetup",
+    "org.vanillaos.FirstSetup.desktop",
+    "chown -R vanilla:vanilla /home/vanilla",
+]
+call = "recipe.add_postinstall_step("
+
+out, i, removed = [], 0, set()
+while True:
+    j = src.find(call, i)
+    if j < 0:
+        out.append(src[i:])
+        break
+    # fim da chamada: parenteses balanceados
+    k, depth = j + len(call), 1
+    while depth:
+        c = src[k]
+        depth += c == "("
+        depth -= c == ")"
+        k += 1
+    block = src[j:k]
+    hit = [m for m in markers if m in block]
+    if hit:
+        removed.update(hit)
+        line_start = src.rfind("\n", 0, j) + 1
+        out.append(src[i:line_start])
+        out.append(" " * (j - line_start) + "pass  # removido p/ imagem KDE (plasma-setup)")
+    else:
+        out.append(src[i:k])
+    i = k
+
+missing = set(markers) - removed
+if missing:
+    sys.exit(f"E: passos nao encontrados no processor.py: {sorted(missing)}")
+
+new = "".join(out)
+compile(new, path, "exec")
+open(path, "w").write(new)
+print(f"I: {len(removed)} passos GNOME/first-setup removidos de {path}")
+PY
