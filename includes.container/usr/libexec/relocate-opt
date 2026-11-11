@@ -44,4 +44,14 @@ done < <(find /etc/systemd/system -type l -print0)
 # Units em /usr/lib/systemd que referenciam /opt
 grep -rlZ '/opt/' /usr/lib/systemd/system 2>/dev/null | xargs -0 -r sed -i 's#\([ ="]\)/opt/#\1/usr/lib/opt/#g'
 
+# /usr/local tambem vira link para /var/usrlocal no sistema instalado: tudo que
+# pacotes colocaram em /usr/local/bin (ex.: wireguird) vai para /usr/bin.
+for f in /usr/local/bin/* /usr/local/sbin/*; do
+    dest="/usr/${f#/usr/local/}"
+    [ -e "$dest" ] && continue
+    mv "$f" "$dest"
+done
+grep -rlZ '/usr/local/s\?bin/' /usr/share/applications /usr/lib/systemd/system /etc/xdg/autostart 2>/dev/null |
+    xargs -0 -r sed -i 's#/usr/local/\(s\?bin\)/#/usr/\1/#g'
+
 cat "$TMPF"

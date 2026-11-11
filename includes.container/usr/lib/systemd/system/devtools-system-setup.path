@@ -3,6 +3,7 @@ Description=Reaplica setup de dev quando usuarios mudam
 
 [Path]
 PathChanged=/etc/passwd
+PathChanged=/etc/shadow
 Unit=devtools-system-setup.service
 
 [Install]

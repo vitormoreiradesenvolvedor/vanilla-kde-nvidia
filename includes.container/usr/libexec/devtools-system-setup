@@ -2,15 +2,38 @@
 # Configuracao de sistema que depende dos usuarios existirem:
 #  - adiciona usuarios humanos aos grupos docker / nix-users / dialout (portas seriais)
 #  - extrai o Homebrew em /home/linuxbrew para o primeiro usuario
+#
+# Disparado tambem por devtools-system-setup.path quando /etc/passwd ou
+# /etc/shadow mudam (usuario criado pelo plasma-setup). Para nao concorrer com
+# o useradd/chpasswd do plasma-setup:
+#  - espera os arquivos de conta pararem de mudar e os locks sumirem;
+#  - so mexe em usuarios que ja tem senha definida;
+#  - usa gpasswd, que trava apenas /etc/group e /etc/gshadow.
 set -u
 
-mapfile -t users < <(getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 && $7 !~ /(nologin|false)$/ {print $1}')
+# Debounce: ate 2 min esperando /etc/passwd e /etc/shadow ficarem 20s parados e sem lock
+for _ in $(seq 24); do
+    now=$(date +%s)
+    newest=$(stat -c %Y /etc/passwd /etc/shadow /etc/group 2>/dev/null | sort -n | tail -1)
+    if [ $((now - newest)) -ge 20 ] && ! ls /etc/passwd.lock /etc/shadow.lock /etc/group.lock /etc/gshadow.lock /etc/.pwd.lock.* >/dev/null 2>&1; then
+        break
+    fi
+    sleep 5
+done
+
+mapfile -t users < <(
+    getent passwd | awk -F: '$3 >= 1000 && $3 < 60000 && $7 !~ /(nologin|false)$/ {print $1}' |
+    while read -r u; do
+        hash="$(getent shadow "$u" | cut -d: -f2)"
+        case "$hash" in ''|'!'*|'*'*) ;; *) echo "$u" ;; esac
+    done
+)
 [ "${#users[@]}" -eq 0 ] && exit 0
 
 for g in docker nix-users dialout; do
     getent group "$g" >/dev/null || groupadd -r "$g"
     for u in "${users[@]}"; do
-        id -nG "$u" | tr ' ' '\n' | grep -qx "$g" || usermod -aG "$g" "$u"
+        id -nG "$u" | tr ' ' '\n' | grep -qx "$g" || gpasswd -a "$u" "$g" >/dev/null
     done
 done
 
